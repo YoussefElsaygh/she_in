@@ -1,114 +1,216 @@
-import 'dart:async';
-
+import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:get/get.dart';
-import 'package:get_it/get_it.dart';
-import 'package:provider/provider.dart';
-import 'package:she_in/core/helpers/app_routes.dart';
-import 'package:she_in/core/localization/app_localization.dart';
-import 'package:she_in/core/navigation/app_navigation.dart';
-import 'package:she_in/core/ui/app_styles.dart';
-import 'package:she_in/pages/mainPage.dart';
-import 'core/helpers/app_providers.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+import 'package:she_in/config/routes.dart';
+import 'package:she_in/config/theme.dart';
+import 'package:she_in/data/repositories/abstract/favorites_repository.dart';
+import 'package:she_in/data/model/filter_rules.dart';
+import 'package:she_in/data/repositories/abstract/product_repository.dart';
+import 'package:she_in/data/repositories/abstract/user_repository.dart';
+import 'package:she_in/locator.dart';
+import 'package:she_in/presentation/features/forget_password/forget_password_screen.dart';
+import 'package:she_in/presentation/features/sign_in/sign_in.dart';
+import 'package:she_in/presentation/features/filters/filters_screen.dart';
+import 'package:she_in/presentation/features/product_details/product_screen.dart';
+import 'package:she_in/presentation/features/products/products.dart';
+import 'package:she_in/presentation/features/sign_in/signin_screen.dart';
+import 'package:she_in/presentation/features/sign_up/signup_screen.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+import 'config/routes.dart';
+import 'data/repositories/abstract/cart_repository.dart';
+import 'data/repositories/abstract/category_repository.dart';
+import 'presentation/features/authentication/authentication.dart';
+import 'presentation/features/forget_password/forget_password.dart';
+import 'presentation/features/sign_up/sign_up_bloc.dart';
+import 'presentation/features/cart/cart.dart';
+import 'presentation/features/categories/categories.dart';
+import 'presentation/features/checkout/checkout.dart';
+import 'presentation/features/favorites/favorites.dart';
+import 'presentation/features/home/home.dart';
+import 'presentation/features/profile/profile.dart';
 
-  runZonedGuarded(() {
-    runApp(MultiProvider(
-      providers: AppProviders.providers,
-      child: App(),
-    ));
-  }, (dynamic error, dynamic stack) {
-    print(error);
-    print(stack);
-  });
-  configLoading();
-}
+import 'locator.dart' as service_locator;
 
-void configLoading() {
-  EasyLoading.instance
-    ..indicatorType = EasyLoadingIndicatorType.threeBounce
-    ..loadingStyle = EasyLoadingStyle.custom
-    ..indicatorSize = 45.0
-    ..maskType = EasyLoadingMaskType.black
-    ..radius = 10.0
-    ..progressColor = AppStyles.primaryColor
-    ..backgroundColor = Colors.transparent
-    ..indicatorColor = AppStyles.primaryColor
-    ..animationStyle = EasyLoadingAnimationStyle.opacity
-    ..textColor = Colors.yellow
-    ..maskColor = Colors.blue.withOpacity(0.5)
-    ..userInteractions = false
-    ..dismissOnTap = false;
-}
-
-class App extends StatefulWidget {
-  App({Key key}) : super(key: key);
-
+class SimpleBlocDelegate extends BlocObserver {
   @override
-  _AppState createState() => _AppState();
-}
-
-class _AppState extends State<App> {
-
-  @override
-  initState() {
-    super.initState();
+  void onEvent(Bloc bloc, Object event) {
+    super.onEvent(bloc, event);
+    print(event);
   }
 
-
-
-
-  // You'll probably want to wrap this function in a debounce
+  @override
+  void onTransition(Bloc bloc, Transition transition) {
+    super.onTransition(bloc, transition);
+    print(transition);
+  }
 
   @override
-  Widget build(BuildContext context) {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-    return MaterialApp(
-      builder: EasyLoading.init(),
-      navigatorKey: Get.key,
-      theme:ThemeData(
-        fontFamily: 'Robota-Regular',
-        primaryColor: AppStyles.primaryColor,
-        accentColor: AppStyles.greyColor,
-        // This makes the visual density adapt to the platform that you run
-        // the app on. For desktop platforms, the controls will be smaller and
-        // closer together (more dense) than on mobile platforms.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: TextTheme(
-            button: TextStyle(fontFamily: 'Robota-Regular'),
-            headline1: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            subtitle1: TextStyle(fontSize: 16),
-            bodyText1: TextStyle(fontSize: 16)),
-      ),
-      supportedLocales: [Locale('en'), Locale('fr')],
-      localizationsDelegates: [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate
-      ],
-      localeListResolutionCallback: (locale, supportedLocales) {
-        print(locale);
-        print(supportedLocales);
-        for (var supportedLocale in supportedLocales) {
-          if (supportedLocale.languageCode == locale[0].languageCode) {
-            AppLocalizations.loadAll(supportedLocale);
-            return supportedLocale;
-          }
-        }
-        return Locale('en');
-      },
+  void onError(Cubit bloc, Object error, StackTrace stacktrace) {
+    super.onError(bloc, error, stacktrace);
+    print(error);
+  }
+}
 
-      routes: AppRoutes.routes,
-      home:MainPage()
+void main() async {
+  await service_locator.init();
+
+  var delegate = await LocalizationDelegate.create(
+    fallbackLocale: 'en_US',
+    supportedLocales: ['en_US', 'de', 'fr'],
+  );
+
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  Bloc.observer = SimpleBlocDelegate();
+  runApp(
+    BlocProvider<AuthenticationBloc>(
+      create: (context) => AuthenticationBloc()..add(AppStarted()),
+      child: MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<CategoryRepository>(
+            create: (context) => sl(),
+          ),
+          RepositoryProvider<ProductRepository>(
+            create: (context) => sl(),
+          ),
+          RepositoryProvider<FavoritesRepository>(
+            create: (context) => sl(),
+          ),
+          RepositoryProvider<UserRepository>(
+            create: (context) => sl(),
+          ),
+          RepositoryProvider<CartRepository>(
+            create: (context) => sl(),
+          ),
+        ],
+        child: LocalizedApp(
+          delegate,
+          OpenFlutterEcommerceApp(),
+        ),
+      ),
+    ),
+  );
+}
+
+class OpenFlutterEcommerceApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var localizationDelegate = LocalizedApp.of(context).delegate;
+
+    return LocalizationProvider(
+        state: LocalizationProvider.of(context).state,
+        child: MaterialApp(
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            localizationDelegate,
+          ],
+          onGenerateRoute: _registerRoutesWithParameters,
+          supportedLocales: localizationDelegate.supportedLocales,
+          debugShowCheckedModeBanner: false,
+          locale: localizationDelegate.currentLocale,
+          title: 'Open FLutter E-commerce',
+          theme: OpenFlutterEcommerceTheme.of(context),
+          routes: _registerRoutes(),
+        ));
+  }
+
+  Map<String, WidgetBuilder> _registerRoutes() {
+    return <String, WidgetBuilder>{
+      OpenFlutterEcommerceRoutes.home: (context) => HomeScreen(),
+      OpenFlutterEcommerceRoutes.cart: (context) => CartScreen(),
+      OpenFlutterEcommerceRoutes.checkout: (context) => CheckoutScreen(),
+      OpenFlutterEcommerceRoutes.favourites: (context) => FavouriteScreen(),
+      OpenFlutterEcommerceRoutes.signin: (context) => _buildSignInBloc(),
+      OpenFlutterEcommerceRoutes.signup: (context) => _buildSignUpBloc(),
+      OpenFlutterEcommerceRoutes.forgotPassword: (context) =>
+          _buildForgetPasswordBloc(),
+      OpenFlutterEcommerceRoutes.profile: (context) =>
+          BlocBuilder<AuthenticationBloc, AuthenticationState>(
+              builder: (context, state) {
+            //TODO: revise authentication later. Right now no login is required.
+            /*if (state is Authenticated) {
+              return ProfileScreen(); //TODO profile properties should be here
+            } else if (state is Unauthenticated) {
+              return _buildSignInBloc();
+            } else {
+              return SplashScreen();
+            }*/
+            return ProfileScreen(); 
+          }),
+    };
+  }
+
+  BlocProvider<ForgetPasswordBloc> _buildForgetPasswordBloc() {
+    return BlocProvider<ForgetPasswordBloc>(
+      create: (context) => ForgetPasswordBloc(
+        userRepository: RepositoryProvider.of<UserRepository>(context),
+      ),
+      child: ForgetPasswordScreen(),
     );
+  }
+
+  BlocProvider<SignInBloc> _buildSignInBloc() {
+    return BlocProvider<SignInBloc>(
+      create: (context) => SignInBloc(
+        userRepository: RepositoryProvider.of<UserRepository>(context),
+        authenticationBloc: BlocProvider.of<AuthenticationBloc>(context),
+      ),
+      child: SignInScreen(),
+    );
+  }
+
+  BlocProvider<SignUpBloc> _buildSignUpBloc() {
+    return BlocProvider<SignUpBloc>(
+      create: (context) => SignUpBloc(
+        userRepository: RepositoryProvider.of<UserRepository>(context),
+        authenticationBloc: BlocProvider.of<AuthenticationBloc>(context),
+      ),
+      child: SignUpScreen(),
+    );
+  }
+
+  Route _registerRoutesWithParameters(RouteSettings settings) {
+    if (settings.name == OpenFlutterEcommerceRoutes.shop) {
+      final CategoriesParameters args = settings.arguments;
+      return MaterialPageRoute(
+        builder: (context) {
+          return CategoriesScreen(
+            parameters: args,
+          );
+        },
+      );
+    } else if (settings.name == OpenFlutterEcommerceRoutes.productList) {
+      final ProductListScreenParameters productListScreenParameters =
+          settings.arguments;
+      return MaterialPageRoute(builder: (context) {
+        return ProductsScreen(
+          parameters: productListScreenParameters,
+        );
+      });
+    } else if (settings.name == OpenFlutterEcommerceRoutes.product) {
+      final ProductDetailsParameters parameters = settings.arguments;
+      return MaterialPageRoute(builder: (context) {
+        return ProductDetailsScreen(parameters);
+      });
+    } else if (settings.name == OpenFlutterEcommerceRoutes.filters) {
+      final FilterRules filterRules = settings.arguments;
+      return MaterialPageRoute(builder: (context) {
+        return FiltersScreen(filterRules);
+      });
+    } else {
+      return MaterialPageRoute(
+        builder: (context) {
+          return HomeScreen();
+        },
+      );
+    }
   }
 }
